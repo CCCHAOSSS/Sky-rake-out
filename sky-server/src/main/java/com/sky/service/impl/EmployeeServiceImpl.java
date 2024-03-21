@@ -16,8 +16,6 @@ import com.sky.exception.PasswordErrorException;
 import com.sky.mapper.EmployeeMapper;
 import com.sky.result.PageResult;
 import com.sky.service.EmployeeService;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Select;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -114,7 +112,6 @@ public class EmployeeServiceImpl implements EmployeeService {
      * */
     @Override
     public void startOrStop(Integer status, Long id) {
-
         Employee employee = Employee.builder()
                 .status(status)
                 .id(id)
@@ -124,6 +121,31 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
 
+    /**
+     *  根据id查员工信息
+     * */
+    @Override
+    public Employee getById(Long id) {
+        Employee employee = employeeMapper.getById(id);
+        // 因为查询到的信息里有密码（从Employee对象属性也能看得出来
+        employee.setPassword("****");
+        return employee;
+    }
+
+    /**
+     * 编辑员工信息
+    * */
+    @Override
+    public void update(EmployeeDTO employeeDTO) {
+        Employee employee = new Employee();
+        BeanUtils.copyProperties(employeeDTO, employee);
+
+        employee.setUpdateTime(LocalDateTime.now());
+        employee.setUpdateUser(BaseContext.getCurrentId());
+
+        employeeMapper.update(employee);
+
+    }
 
 
 }

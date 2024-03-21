@@ -11,6 +11,7 @@ import com.sky.result.Result;
 import com.sky.service.EmployeeService;
 import com.sky.utils.JwtUtil;
 import com.sky.vo.EmployeeLoginVO;
+import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,9 +35,7 @@ public class EmployeeController {
 
     /**
      * 登录
-     *
      * @param employeeLoginDTO
-     * @return
      */
     @PostMapping("/login")
     public Result<EmployeeLoginVO> login(@RequestBody EmployeeLoginDTO employeeLoginDTO) {
@@ -64,8 +63,6 @@ public class EmployeeController {
 
     /**
      * 退出
-     *
-     * @return
      */
     @PostMapping("/logout")
     @ApiOperation("员工退出")
@@ -100,7 +97,6 @@ public class EmployeeController {
     /**
      * 启用、禁用员工账号
      * */
-
     @PostMapping("/status/{status}")
     public Result startOrStop(@PathVariable Integer status, Long id){
         log.info("启用、禁用员工账号与status：{},{}", id,status);
@@ -108,4 +104,23 @@ public class EmployeeController {
         return Result.success();
     }
 
+    /**
+     * 查询员工数据
+     * */
+    @GetMapping("/{id}")
+    @ApiOperation("根据id查询员工数据")
+    public Result<Employee> getById(@PathVariable Long id){
+        Employee employee =  employeeService.getById(id);
+        return Result.success(employee);
+    }
+
+    /**
+     * 编辑员工数据
+     * */
+    @PutMapping()
+    public Result update(@RequestBody EmployeeDTO employeeDTO){
+        log.info("编辑员工信息");
+        employeeService.update(employeeDTO);
+        return Result.success();
+    }
 }
