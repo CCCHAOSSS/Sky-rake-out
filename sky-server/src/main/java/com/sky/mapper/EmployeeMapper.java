@@ -34,4 +34,6 @@ public interface EmployeeMapper {
      * 动态sql 用xml
     * */
     Page<Employee> pageQuery(EmployeePageQueryDTO employeePageQueryDTO);
+
+    void update(Employee employee);
 }

@@ -93,8 +93,19 @@ public class EmployeeController {
     @ApiOperation("员工分类查询")
     public Result<PageResult> pageResultResult(EmployeePageQueryDTO employeePageQueryDTO){
         log.info("员工分页查询：{}", employeePageQueryDTO);
-         PageResult pageResult = employeeService.pageQuery(employeePageQueryDTO);
+        PageResult pageResult = employeeService.pageQuery(employeePageQueryDTO);
         return Result.success(pageResult);
+    }
+
+    /**
+     * 启用、禁用员工账号
+     * */
+
+    @PostMapping("/status/{status}")
+    public Result startOrStop(@PathVariable Integer status, Long id){
+        log.info("启用、禁用员工账号与status：{},{}", id,status);
+        employeeService.startOrStop(status, id);
+        return Result.success();
     }
 
 }
