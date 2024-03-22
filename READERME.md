@@ -1,1 +1,0 @@
-# Sky-take-out
