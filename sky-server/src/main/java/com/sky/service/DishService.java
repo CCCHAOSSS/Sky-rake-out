@@ -50,4 +50,9 @@ public interface DishService {
      * 菜品停售启售
      * */
     void startOrStop(Integer status, Long id);
+
+    /**
+     * 条件查询菜品和口味
+     * */
+    List<DishVO> listWithFlavor(Dish dish);
 }
