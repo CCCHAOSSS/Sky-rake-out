@@ -8,5 +8,5 @@ A project for learning **business** and **CURD** functionality.
 *  **3.22** ： **Dish** CRUD and Configure **Aliyun OSS** (Configuration not uploaded)
 *  **3.23** ： **Setmeal** CRUD
 *  **3.25** ： **Redis** and **Setmeal cache**
-*  **3.26** :  **Accessing WeChat Mini Programs**
-*  **3.28** :  **ShoppingCart**
+*  **3.26** ：  **Accessing WeChat Mini Programs**
+*  **3.28** ： **ShoppingCart**
