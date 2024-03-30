@@ -41,7 +41,7 @@ public class UserController {
     @PostMapping("/login")
     @ApiOperation("微信登录")
     public Result<UserLoginVO> login(@RequestBody UserLoginDTO userLoginDTO){
-        log.info("wx用户登录”{}", userLoginDTO.getCode());
+        log.info("wx用户登录:{}", userLoginDTO.getCode());
         //微信登录
         User user = userService.wxLogin(userLoginDTO);
 
@@ -59,6 +59,4 @@ public class UserController {
         return Result.success(userLoginVO);
 
     }
-
-
 }
