@@ -1,8 +1,11 @@
 package com.sky.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
 import com.sky.context.BaseContext;
+import com.sky.dto.OrdersPageQueryDTO;
 import com.sky.dto.OrdersPaymentDTO;
 import com.sky.dto.OrdersSubmitDTO;
 import com.sky.entity.*;
@@ -10,10 +13,12 @@ import com.sky.exception.AddressBookBusinessException;
 import com.sky.exception.OrderBusinessException;
 import com.sky.exception.ShoppingCartBusinessException;
 import com.sky.mapper.*;
+import com.sky.result.PageResult;
 import com.sky.service.OrderService;
 import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderSubmitVO;
+import com.sky.vo.OrderVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author limei
@@ -50,6 +56,8 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private UserMapper userMapper;
 
+    public static Long orderid;
+
     @Override
     @Transactional
     public OrderSubmitVO submitOrder(OrdersSubmitDTO ordersSubmitDTO) {
@@ -69,7 +77,6 @@ public class OrderServiceImpl implements OrderService {
         if(shoppingCartList == null || shoppingCartList.size() == 0){
             throw  new ShoppingCartBusinessException(MessageConstant.SHOPPING_CART_IS_NULL);
         }
-
 
         //向订单插入1条数据
         Orders orders = new Orders();
@@ -105,6 +112,8 @@ public class OrderServiceImpl implements OrderService {
                 .orderNumber(orders.getNumber())
                 .orderAmount(orders.getAmount())
                 .build();
+
+        orderid = orders.getId();
 
         return orderSubmitVO;
     }
@@ -145,8 +154,8 @@ public class OrderServiceImpl implements OrderService {
         Integer OrderStatus = Orders.TO_BE_CONFIRMED;  //订单状态，待接单
         //发现没有将支付时间 check_out属性赋值，所以在这里更新
         LocalDateTime check_out_time = LocalDateTime.now();
-        String orderId = ordersPaymentDTO.getOrderNumber();
-        orderMapper.updateStatus(OrderStatus, OrderPaidStatus, check_out_time, orderId);
+//        String orderId = ordersPaymentDTO.getOrderNumber();
+        orderMapper.updateStatus(OrderStatus, OrderPaidStatus, check_out_time, orderid);
         return vo;
     }
 
@@ -172,4 +181,122 @@ public class OrderServiceImpl implements OrderService {
 
         orderMapper.update(orders);
     }
+
+    /**
+     * 用户端订单分页查询
+     * */
+    @Override
+    public PageResult page(int pageNum, int pageSize, Integer status) {
+        // 设置分页
+        PageHelper.startPage(pageNum, pageSize);
+
+        OrdersPageQueryDTO ordersPageQueryDTO = new OrdersPageQueryDTO();
+        ordersPageQueryDTO.setUserId(BaseContext.getCurrentId());
+        ordersPageQueryDTO.setStatus(status);
+
+        //分页查询条件
+        Page<Orders> page = orderMapper.pageQuery(ordersPageQueryDTO);
+
+        List<OrderVO> list = new ArrayList<>();
+
+        //查询订单明细，封装orderVO
+        if(page != null && page.getTotal() >0){
+            for(Orders orders: page){
+                Long orderId = orders.getId();  //订单id
+
+                //查询订单明细
+                List<OrderDetail> orderDetails = orderDetailMapper.getByOrderId(orderId);
+
+                OrderVO orderVO = new OrderVO();
+                BeanUtils.copyProperties(orders, orderVO);
+                orderVO.setOrderDetailList(orderDetails);
+
+                list.add(orderVO);
+            }
+        }
+        return new PageResult(page.getTotal(), list);
+    }
+
+    /**
+     * 根据ID查询详情
+     * */
+    @Override
+    public OrderVO details(Long id) {
+        //根据id查询订单
+        Orders orders = orderMapper.getById(id);
+
+        //查询对应的菜品/套餐
+        List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(orders.getId());
+
+        //将订单及详情封装
+        OrderVO orderVO = new OrderVO();
+        BeanUtils.copyProperties(orders, orderVO);
+        orderVO.setOrderDetailList(orderDetailList);
+        return orderVO;
+    }
+
+
+    /**
+     * 用户取消订单
+     * */
+    public void userCancelById(Long id) throws Exception {
+        Orders ordersDB = orderMapper.getById(id);
+        if(ordersDB == null){
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+
+        // 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
+        if(ordersDB.getStatus() > 2){
+            throw new OrderBusinessException((MessageConstant.ORDER_STATUS_ERROR));
+        }
+
+        Orders orders = new Orders();
+        orders.setId(ordersDB.getId());
+
+        //订单处于接单状态下取消需要退款
+        if(ordersDB.getStatus().equals(Orders.TO_BE_CONFIRMED)){
+            //调用微信支付退款接口
+//            weChatPayUtil.refund(
+//                    ordersDB.getNumber(), //商户订单号
+//                    ordersDB.getNumber(), //商户退款单号
+//                    new BigDecimal(0.01),//退款金额，单位 元
+//                    new BigDecimal(0.01));//原订单金额
+
+            orders.setPayStatus(Orders.REFUND);
+        }
+
+        // 更新订单状态、取消原因、取消时间
+        orders.setStatus(Orders.CANCELLED);
+        orders.setCancelReason("用户取消");
+        orders.setCancelTime(LocalDateTime.now());
+        orderMapper.update(orders);
+    }
+
+
+
+    @Override
+    public void repetition(Long id) {
+        //查询当前用户id
+        Long userId = BaseContext.getCurrentId();
+
+        // 根据订单id查询当前订单详情
+        List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(id);
+
+        // 将订单详情转换为购物车对象
+        List<ShoppingCart> shoppingCartList = orderDetailList.stream().map(x -> {
+            ShoppingCart shoppingCart = new ShoppingCart();
+
+            //复制菜品信息到购物车中
+            BeanUtils.copyProperties(x, shoppingCart, "id");
+            shoppingCart.setUserId(userId);
+            shoppingCart.setCreateTime(LocalDateTime.now());
+
+            return  shoppingCart;
+        }).collect(Collectors.toList());
+
+        //将购物车对象批量增加到数据库
+        shoppingCartMapper.insertBatch(shoppingCartList);
+
+    }
+
 }
