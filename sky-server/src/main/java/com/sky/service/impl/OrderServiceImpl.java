@@ -14,11 +14,13 @@ import com.sky.exception.ShoppingCartBusinessException;
 import com.sky.mapper.*;
 import com.sky.result.PageResult;
 import com.sky.service.OrderService;
+import com.sky.task.WebSocketTask;
 import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import com.sky.websocket.WebSocketServer;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,7 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -58,6 +62,9 @@ public class OrderServiceImpl implements OrderService {
 
     public static Long orderid;
 
+    @Autowired
+    private WebSocketServer webSocketServer;
+
     @Override
     @Transactional
     public OrderSubmitVO submitOrder(OrdersSubmitDTO ordersSubmitDTO) {
@@ -67,6 +74,7 @@ public class OrderServiceImpl implements OrderService {
         if(addressBook == null){
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
         }
+
         // TODO: 检查用户的收货地址是否超出配送范围
 
         Long userId = BaseContext.getCurrentId();
@@ -180,6 +188,17 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         orderMapper.update(orders);
+
+        //通过websocket向客户端浏览器推送消息 type orderId content
+//        Map map = new HashMap();
+//        map.put("type",1);  //1表示来单提示，2 表示客户催单
+//        map.put("orderId", ordersDB.getId());
+//        map.put("content", "订单号：" + outTradeNo);
+//
+//        String json = JSONObject.toJSONString(map);
+//        webSocketServer.sendToAllClient(json);
+
+
     }
 
     /**
@@ -442,6 +461,24 @@ public class OrderServiceImpl implements OrderService {
 
         orderMapper.update(orders);
     }
+
+
+//    /**
+//     * 客户催单
+//     * */
+//    @Override
+//    public void reminder(Long id) {
+//        // 根据id查询订单
+//        Orders ordersDB = orderMapper.getById(id);
+//        // 校验订单是否存在
+//        if (ordersDB == null) {
+//            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+//        }
+//
+//
+//
+//
+//    }
 
     private List<OrderVO> getOrderVOList(Page<Orders> page) {
         // 需要返回订单菜品信息，自定义OrderVO响应结果
