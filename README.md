@@ -12,4 +12,7 @@ A project for learning **business** and **CURD** functionality.
 *  **3.28** ： **ShoppingCart**
 *  **3.29** ： Fix the issue of **empty openid** for user login. Fix that shopping carts will query all records in the shopping cart table when different users log in.
 *  **4.02** ： **B-end Order management** and **C-end Order management**
-*  **4.04** ： **statistics Report and visualization** 
+*  **4.04** ： **statistics Report and visualization**
+
+## TODO List：
+More Redis based features (Maybe :))
